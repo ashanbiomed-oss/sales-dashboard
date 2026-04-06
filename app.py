@@ -86,8 +86,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 5. HEADER
-st.title("📊 Sales Quotation Dashboard")
-st.caption("Biomed Scientific (Pvt) Ltd")
+st.title("Sales Quotation Dashboard")
+st.caption("Version 1 From the data of 01.01.2025 to 23.03.2026")
 
 # Summary Bar
 c1, c2, c3, c4 = st.columns(4)
