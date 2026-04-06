@@ -1,15 +1,45 @@
 import streamlit as st
 
 def check_password():
+    """Returns True if the user had the correct password."""
+
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if st.session_state["password_input"] == "YourCompanyPassword2024":
+            st.session_state["password_correct"] = True
+            del st.session_state["password_input"]  # Clean up the password from state
+        else:
+            st.session_state["password_correct"] = False
+
     if "password_correct" not in st.session_state:
-        st.text_input("Enter Password", type="password", on_change=lambda: st.session_state.update({"password_correct": st.session_state.password == "YourCompanyPassword2024"}), key="password")
+        # First run: show the input box
+        st.text_input(
+            "Enter Company Password", 
+            type="password", 
+            on_change=password_entered, 
+            key="password_input"
+        )
         return False
-    return st.session_state["password_correct"]
+    elif not st.session_state["password_correct"]:
+        # Wrong password: show input box again + error message
+        st.text_input(
+            "Enter Company Password", 
+            type="password", 
+            on_change=password_entered, 
+            key="password_input"
+        )
+        st.error("😕 Incorrect password. Please try again.")
+        return False
+    else:
+        # Password was correct
+        return True
 
 if not check_password():
-    st.stop()  # Stop the app here if password is wrong
+    st.stop()  # Halt the app until password is correct
 
-# ... (Rest of your dashboard code goes here)
+# --- REST OF YOUR DASHBOARD CODE STARTS HERE ---
+st.success("Login Successful!") 
+# (Paste the load_data() and display logic here)
 import streamlit as st
 import pandas as pd
 
