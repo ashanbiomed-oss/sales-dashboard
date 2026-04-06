@@ -5,7 +5,7 @@ def check_password():
 
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if st.session_state["password_input"] == "YourCompanyPassword2024":
+        if st.session_state["password_input"] == "JVc32VEDsJhnnhrE":
             st.session_state["password_correct"] = True
             del st.session_state["password_input"]  # Clean up the password from state
         else:
@@ -14,7 +14,7 @@ def check_password():
     if "password_correct" not in st.session_state:
         # First run: show the input box
         st.text_input(
-            "Enter Company Password", 
+            "Enter Password", 
             type="password", 
             on_change=password_entered, 
             key="password_input"
