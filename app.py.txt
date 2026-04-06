@@ -1,0 +1,55 @@
+import streamlit as st
+import pandas as pd
+
+# 1. Page Configuration
+st.set_page_config(page_title="Biomed Sales Dashboard", layout="wide")
+
+# 2. Load Data
+@st.cache_data
+def load_data():
+    df = pd.read_csv('quotation_data_extracted.csv')
+    df['Quotation Expecting Day'] = pd.to_datetime(df['Quotation Expecting Day'], errors='coerce')
+    df['Month_Name'] = df['Quotation Expecting Day'].dt.strftime('%B')
+    return df
+
+df = load_data()
+
+# 3. Sidebar Filter
+st.sidebar.header("Filter Data")
+all_cats = sorted(df['Product Category'].unique())
+category = st.sidebar.selectbox("Select Product Category", ["All Categories"] + list(all_cats))
+
+# 4. Header Stats
+st.title("📊 Sales Quotation Dashboard")
+st.markdown("### Biomed Scientific (Pvt) Ltd")
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Total Line Items", len(df))
+with col2:
+    st.metric("Total Customers", df['Customer Name'].nunique())
+with col3:
+    st.metric("Product Categories", df['Product Category'].nunique())
+
+st.divider()
+
+# 5. Display Logic
+if category == "All Categories":
+    st.subheader("Overview by Category")
+    cat_summary = df.groupby('Product Category')['Quantity'].sum().sort_values(ascending=False)
+    st.bar_chart(cat_summary)
+    st.dataframe(df.head(20), use_container_width=True)
+else:
+    # Drill down into specific category
+    filt_df = df[df['Product Category'] == category]
+    
+    st.subheader(f"Drill-down: {category}")
+    
+    # Month selection
+    month = st.selectbox("Select Month", sorted(filt_df['Month_Name'].unique()))
+    month_df = filt_df[filt_df['Month_Name'] == month]
+    
+    # Item Breakdown
+    items = month_df.groupby(['Part Number', 'Product Name'])['Quantity'].sum().reset_index()
+    st.write(f"Showing items for **{month}**")
+    st.table(items.sort_values('Quantity', ascending=False))
