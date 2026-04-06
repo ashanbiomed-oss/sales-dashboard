@@ -1,4 +1,16 @@
 import streamlit as st
+
+def check_password():
+    if "password_correct" not in st.session_state:
+        st.text_input("Enter Password", type="password", on_change=lambda: st.session_state.update({"password_correct": st.session_state.password == "YourCompanyPassword2024"}), key="password")
+        return False
+    return st.session_state["password_correct"]
+
+if not check_password():
+    st.stop()  # Stop the app here if password is wrong
+
+# ... (Rest of your dashboard code goes here)
+import streamlit as st
 import pandas as pd
 
 # 1. SETUP & THEME
