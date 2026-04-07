@@ -126,7 +126,22 @@ if st.session_state.view == 'categories':
                 st.session_state.view = 'months'
                 st.rerun()
 
-# --- LAYER 2: MONTHS ---
+# --- LAYER 2: YEARS (New Layer) ---
+elif st.session_state.view == 'years':
+    cat = st.session_state.sel_cat
+    st.subheader(f"Select Year for {cat}")
+    cat_df = df[df['Product Category'] == cat]
+    years = cat_df.groupby('Year')['Quantity'].sum().reset_index().sort_values('Year')
+    
+    grid = st.columns(4)
+    for i, row in enumerate(years.itertuples()):
+        with grid[i % 4]:
+            st.metric(f"Year {int(row.Year)}", f"{int(row.Quantity):,}")
+            if st.button(f"View {int(row.Year)}", key=f"yr_{row.Year}"):
+                st.session_state.sel_year = row.Year
+                st.session_state.view = 'months'
+                st.rerun()
+# --- LAYER 3: MONTHS ---
 elif st.session_state.view == 'months':
     cat = st.session_state.sel_cat
     st.subheader(f"Months for {cat}")
@@ -143,7 +158,7 @@ elif st.session_state.view == 'months':
                 st.session_state.view = 'items'
                 st.rerun()
 
-# --- LAYER 3: ITEMS & CUSTOMERS ---
+# --- LAYER 4: ITEMS & CUSTOMERS ---
 elif st.session_state.view == 'items':
     cat = st.session_state.sel_cat
     month = st.session_state.sel_month
