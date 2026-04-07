@@ -161,15 +161,27 @@ elif st.session_state.view == 'items':
     month = st.session_state.sel_month
     st.subheader(f"Items in {month} {int(year)} — {cat}")
     
-    # Filter by Cat, Year, AND Month
     item_df = df[(df['Product Category'] == cat) & 
                  (df['Year'] == year) & 
                  (df['Month_Name'] == month)]
     
-    items = item_df.groupby(['Part Number', 'Product Name'])['Quantity'].sum().reset_index().sort_values('Quantity', ascending=False)
-    
+    # We round the main items list to 2 decimals as well
+    items = item_df.groupby(['Part Number', 'Product Name'])['Quantity'].sum().reset_index()
+    items = items.sort_values('Quantity', ascending=False)
+
     for _, row in items.iterrows():
-        with st.expander(f"{row['Product Name']} ({int(row['Quantity'])} units)"):
+        # Display the item quantity with 2 decimal points in the expander title
+        with st.expander(f"{row['Product Name']} ({row['Quantity']:,.2f} units)"):
             st.write("**Customer Breakdown:**")
+            
+            # 1. Group and Sum
             cust_breakdown = item_df[item_df['Part Number'] == row['Part Number']].groupby('Customer Name')['Quantity'].sum().reset_index()
-            st.table(cust_breakdown)
+            
+            # 2. Sort from Highest to Lowest
+            cust_breakdown = cust_breakdown.sort_values(by='Quantity', ascending=False)
+            
+            # 3. Round to 2 decimal places
+            cust_breakdown['Quantity'] = cust_breakdown['Quantity'].round(2)
+            
+            # Reset index to hide the row numbers for a cleaner look
+            st.table(cust_breakdown.set_index('Customer Name'))
