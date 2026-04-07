@@ -23,12 +23,12 @@ def check_password():
     elif not st.session_state["password_correct"]:
         # Wrong password: show input box again + error message
         st.text_input(
-            "Enter Company Password", 
+            "Enter Password", 
             type="password", 
             on_change=password_entered, 
             key="password_input"
         )
-        st.error("😕 Incorrect password. Please try again.")
+        st.error("Incorrect password. Please try again.")
         return False
     else:
         # Password was correct
@@ -79,8 +79,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 5. HEADER
-st.title("📊 Sales Quotation Dashboard")
-st.caption("Biomed Scientific (Pvt) Ltd")
+st.title("Sales Quotation Dashboard")
+st.caption("Vesrion 1.1")
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Line Items", f"{len(df):,}")
