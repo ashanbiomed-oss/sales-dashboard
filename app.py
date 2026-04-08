@@ -79,7 +79,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # 5. HEADER
-st.title("Sales Quotation Dashboard")
+st.title("Sales Quotation Requests Dashboard")
 st.caption("Vesrion 1.1")
 
 c1, c2, c3, c4 = st.columns(4)
