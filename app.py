@@ -89,18 +89,54 @@ df = load_data()
 
 # --- 3. SEARCH LOGIC (Sidebar) ---
 st.sidebar.header("Navigation & Search")
-search_query = st.sidebar.text_input("🔍 Global Search", placeholder="Customer, Part #, or Product...")
 
-if 'view' not in st.session_state:
-    st.session_state.view = 'categories'
-    st.session_state.sel_cat = None
-    st.session_state.sel_year = None
-    st.session_state.sel_month = None
+# We use session_state to control the text in the search box
+if "search_text" not in st.session_state:
+    st.session_state.search_text = ""
 
-# --- 4. HEADER ---
+def clear_search():
+    st.session_state.search_text = ""
+
+# The text input now uses the session_state value
+search_query = st.sidebar.text_input(
+    "🔍 Search", 
+    value=st.session_state.search_text,
+    key="search_input_box",
+    placeholder="Customer, Part #, or Product...",
+    on_change=lambda: st.session_state.update({"search_text": st.session_state.search_input_box})
+)
+
+# Show a 'Clear' button in sidebar if something is searched
+if search_query:
+    st.sidebar.button("❌ Clear Search", on_click=clear_search)
+
+# --- 5. DISPLAY LOGIC ---
+# --- 3. DATA LOADING (Updated to prepare search list) ---
+@st.cache_data
+def load_data():
+    df = pd.read_csv('quotation_data_extracted.csv')
+    df['Quotation Expecting Day'] = pd.to_datetime(df['Quotation Expecting Day'], errors='coerce')
+    df['Year'] = df['Quotation Expecting Day'].dt.year
+    df['Month_Name'] = df['Quotation Expecting Day'].dt.strftime('%B')
+    df['Month_Num'] = df['Quotation Expecting Day'].dt.month
+    df = df.fillna({'Part Number': 'N/A', 'Product Name': 'Unknown', 'Customer Name': 'Unknown'})
+    
+    # Pre-calculate a list of all searchable terms for the dropdown
+    customers = df['Customer Name'].unique().tolist()
+    parts = df['Part Number'].unique().tolist()
+    products = df['Product Name'].unique().tolist()
+    
+    # Combine and sort for the dropdown list
+    search_options = sorted(list(set(customers + parts + products)))
+    return df, search_options
+
+df, search_options = load_data()
+
+# --- 4. NAVIGATION & SEARCH (Main Area) ---
 st.title("Sales Quotation Requests Dashboard")
-st.caption("Version 1.2 — Enhanced Search & Item Details")
+st.caption("Version 1.3 — Smart Search & Dropdown")
 
+# Stats Bar (Top)
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Line Items", f"{len(df):,}")
 c2.metric("Customers", df['Customer Name'].nunique())
@@ -108,46 +144,67 @@ c3.metric("Unique Items", df['Part Number'].nunique())
 c4.metric("Categories", df['Product Category'].nunique())
 st.divider()
 
+# --- THE "MIDDLE" SEARCH DROPDOWN ---
+st.write("### 🔍 Quick Search")
+selected_search = st.selectbox(
+    "Type to search for a Customer, Part Number, or Product Name:",
+    options=[None] + search_options, 
+    index=0,
+    placeholder="Start typing...",
+    help="Selecting an item here will override the manual filters below."
+)
+
+if st.sidebar.button("🏠 Home"):
+    st.session_state.view = 'categories'
+    st.rerun()
+
 # --- 5. DISPLAY LOGIC ---
 
-# IF USER IS SEARCHING
-if search_query:
-    st.subheader(f"Search Results for: '{search_query}'")
+# IF USER SELECTED SOMETHING FROM DROPDOWN
+if selected_search:
+    if st.button("⬅ Clear Search & Return to Layers"):
+        st.rerun()
+
+    st.subheader(f"Results for: '{selected_search}'")
     
-    # Filter across multiple columns
+    # Filter for exact match from the dropdown selection
     mask = (
-        df['Customer Name'].str.contains(search_query, case=False) |
-        df['Part Number'].str.contains(search_query, case=False) |
-        df['Product Name'].str.contains(search_query, case=False) |
-        df['Product Category'].str.contains(search_query, case=False)
+        (df['Customer Name'] == selected_search) |
+        (df['Part Number'] == selected_search) |
+        (df['Product Name'] == selected_search)
     )
     search_df = df[mask]
     
-    if search_df.empty:
-        st.warning("No matches found. Try a different keyword.")
-    else:
-        # Show results grouped by item
-        results = search_df.groupby(['Part Number', 'Product Name']).agg({'Quantity': 'sum'}).reset_index()
-        results = results.sort_values('Quantity', ascending=False)
-        
-        for _, row in results.iterrows():
-            with st.expander(f"{row['Product Name']} [{row['Part Number']}] — {row['Quantity']:,.2f} total"):
-                st.write("**Found in following transactions:**")
-                breakdown = search_df[search_df['Part Number'] == row['Part Number']]
-                breakdown = breakdown.groupby(['Customer Name', 'Year', 'Month_Name'])['Quantity'].sum().reset_index()
-                breakdown = breakdown.sort_values('Quantity', ascending=False)
-                st.table(breakdown.style.format({"Quantity": "{:.2f}"}))
+    # Show results grouped by item
+    results = search_df.groupby(['Part Number', 'Product Name']).agg({'Quantity': 'sum'}).reset_index()
+    results = results.sort_values('Quantity', ascending=False)
+    
+    for _, row in results.iterrows():
+        # Title now includes Part Number in brackets
+        with st.expander(f"{row['Product Name']} [{row['Part Number']}] — {row['Quantity']:,.2f} total"):
+            st.write("**Transaction Details:**")
+            breakdown = search_df[search_df['Part Number'] == row['Part Number']]
+            # Added Year and Month to the breakdown table for clarity
+            breakdown_table = breakdown.groupby(['Customer Name', 'Year', 'Month_Name'])['Quantity'].sum().reset_index()
+            breakdown_table = breakdown_table.sort_values('Quantity', ascending=False)
+            
+            # Formatting the table for 2 decimals and no index
+            st.table(breakdown_table.set_index('Customer Name').style.format({"Quantity": "{:.2f}"}))
 
-# IF NO SEARCH, SHOW LAYERS
+# IF NO SEARCH SELECTED, SHOW THE LAYERS AS USUAL
 else:
-    # --- BACK BUTTON ---
+    # --- BREADCRUMBS / BACK BUTTON ---
     if st.session_state.view != 'categories':
-        if st.sidebar.button("⬅ Back to Previous Layer"):
+        if st.button("⬅ Back to Previous Layer"):
             if st.session_state.view == 'items': st.session_state.view = 'months'
             elif st.session_state.view == 'months': st.session_state.view = 'years'
             else: st.session_state.view = 'categories'
             st.rerun()
 
+    # (Insert your Category / Year / Month / Item layer code here...)
+
+            
+    # ... (Rest of your Category/Year/Month/Item layers code goes here)
     # LAYER 1: CATEGORIES
     if st.session_state.view == 'categories':
         st.subheader("Select a Category")
