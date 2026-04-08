@@ -37,7 +37,6 @@ CAT_COLORS = {
 # --- 3. DATA LOADING ---
 @st.cache_data
 def load_data():
-    # Load and clean dates
     df = pd.read_csv('quotation_data_extracted.csv')
     df['Quotation Expecting Day'] = pd.to_datetime(df['Quotation Expecting Day'], errors='coerce')
     df['Year'] = df['Quotation Expecting Day'].dt.year
@@ -71,7 +70,7 @@ if 'view' not in st.session_state:
 
 # --- 5. HEADER & TOP METRICS ---
 st.title("Sales Quotation Requests Dashboard")
-st.caption("Version 1.4 — Integrated Smart Search & Drill-Down")
+st.caption("Version 1.5")
 
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Total Line Items", f"{len(df):,}")
@@ -90,7 +89,7 @@ selected_search = st.selectbox(
 )
 
 # Sidebar Reset Button
-if st.sidebar.button("🏠 Reset to Dashboard Home"):
+if st.sidebar.button("🏠 Home"):
     st.session_state.view = 'categories'
     st.rerun()
 
@@ -111,7 +110,7 @@ if selected_search:
     )
     search_df = df[mask]
     
-    # Group by Part Number so we don't show the same item multiple times
+    # Group by Part Number
     results = search_df.groupby(['Part Number', 'Product Name']).agg({'Quantity': 'sum'}).reset_index()
     results = results.sort_values('Quantity', ascending=False)
     
@@ -122,7 +121,11 @@ if selected_search:
             breakdown_table = breakdown.groupby(['Customer Name', 'Year', 'Month_Name'])['Quantity'].sum().reset_index()
             breakdown_table = breakdown_table.sort_values('Quantity', ascending=False)
             
-            st.table(breakdown_table.set_index('Customer Name').style.format({"Quantity": "{:.2f}"}))
+            # --- FIX: Formatted Year to 0 decimals and Quantity to 2 decimals ---
+            st.table(breakdown_table.set_index('Customer Name').style.format({
+                "Quantity": "{:.2f}", 
+                "Year": "{:.0f}"
+            }))
 
 # CASE B: LAYERED NAVIGATION
 else:
@@ -189,10 +192,8 @@ else:
         items = item_df.groupby(['Part Number', 'Product Name'])['Quantity'].sum().reset_index().sort_values('Quantity', ascending=False)
         
         for _, row in items.iterrows():
-            # Item Header with Part Number
             with st.expander(f"{row['Product Name']} [{row['Part Number']}] ({row['Quantity']:,.2f} units)"):
                 st.write("**Customer Breakdown:**")
                 cust_breakdown = item_df[item_df['Part Number'] == row['Part Number']].groupby('Customer Name')['Quantity'].sum().reset_index()
                 cust_breakdown = cust_breakdown.sort_values(by='Quantity', ascending=False)
-                # Display table with 2 decimal points and sorted by volume
                 st.table(cust_breakdown.set_index('Customer Name').style.format("{:.2f}"))
