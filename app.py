@@ -23,7 +23,7 @@ if not check_password():
     st.stop()
 
 # --- 2. CONFIG & DATA LOADING ---
-st.set_page_config(page_title="Inventory & Sales Suite", layout="wide")
+st.set_page_config(page_title="Procurement & Sales Suite", layout="wide")
 
 @st.cache_data
 def load_data():
@@ -63,7 +63,7 @@ for key in ['sel_cust', 'sel_order_month', 'sel_cat']:
 # --- 4. EXCEL EXPORT FUNCTION ---
 def to_excel(dataframe):
     output = io.BytesIO()
-    # Switched engine to 'openpyxl' for better compatibility
+    # Uses openpyxl (Ensure this is in requirements.txt!)
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         dataframe.to_excel(writer, index=False, sheet_name='Procurement_Plan')
     return output.getvalue()
@@ -75,9 +75,7 @@ st.session_state.mode = st.sidebar.radio("Switch View:", ["Procurement Planner",
 st.sidebar.divider()
 st.sidebar.subheader("Excel Export")
 
-# Export Full Detailed List
 if st.sidebar.button("📊 Generate Detailed Excel Report"):
-    # Create a detailed dataframe for the export
     report_df = df[[
         'Customer Name', 
         'Order_Month', 
@@ -102,7 +100,6 @@ if st.sidebar.button("📊 Generate Detailed Excel Report"):
         'Quantity'
     ]
     
-    # Sort for the user
     report_df = report_df.sort_values(['Order Placement Year', 'Order Placement Month'])
     
     excel_data = to_excel(report_df)
@@ -121,7 +118,7 @@ if st.sidebar.button("🏠 Reset Dashboard Home"):
 st.title(f"{st.session_state.mode}")
 
 if st.session_state.mode == "Procurement Planner":
-    st.info("💡 **Goal:** See what orders to place 2 months in advance.")
+    st.info("💡 **Goal:** Plan orders 2 months before customer requirement.")
     
     # BACK BUTTON
     if st.session_state.view != 'main':
@@ -153,7 +150,7 @@ if st.session_state.mode == "Procurement Planner":
         cols = st.columns(4)
         for i, row in enumerate(months.itertuples()):
             with cols[i % 4]:
-                st.metric(f"To order in {row.Order_Month}", f"{row.Quantity:,.2f}")
+                st.metric(f"Order in {row.Order_Month}", f"{row.Quantity:,.2f}")
                 if st.button(f"Open {row.Order_Month}", key=f"p_mo_{i}"):
                     st.session_state.sel_order_month = row.Order_Month
                     st.session_state.view = 'categories'
@@ -191,11 +188,8 @@ if st.session_state.mode == "Procurement Planner":
         for _, row in items.iterrows():
             with st.expander(f"{row['Product Name']} [{row['Part Number']}]"):
                 st.write(f"**Quantity to Order:** {row['Quantity']:,.2f}")
-                st.warning(f"Note: This is to fulfill the request for **{row['Month_Name']}**.")
+                st.warning(f"This order is needed for delivery in **{row['Month_Name']}**.")
 
-# SALES VIEW (Simple placeholder)
 else:
-    st.info("Sales View is active. Use the Procurement Planner for ordering logic.")
-    st.write("---")
-    st.subheader("Category Totals")
+    st.info("Sales View active. Switching modes in the sidebar resets the drill-down.")
     st.bar_chart(df.groupby('Product Category')['Quantity'].sum())
